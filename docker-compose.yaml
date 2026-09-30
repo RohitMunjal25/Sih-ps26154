@@ -1,0 +1,85 @@
+services:
+
+  mongodb:
+    image: mongo:7
+    container_name: nitogen-mongodb
+    restart: unless-stopped
+
+    volumes:
+      - mongo_data:/data/db
+
+    networks:
+      - nitogen
+
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+
+    container_name: nitogen-backend
+    restart: unless-stopped
+
+    depends_on:
+      - mongodb
+
+    ports:
+      - "5000:5000"
+
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+
+      DEMO_MODE: "true"
+      DEMO_EMAIL: demo@nitogen.local
+      DEMO_PASSWORD: Demo@123456
+
+      MONGO_URI: mongodb://mongodb:27017/sih
+
+      # Ollama runs on the Windows host
+      OLLAMA_URL: http://host.docker.internal:11434/v1
+      LLM_BASE_URL: http://host.docker.internal:11434/v1
+
+      LLM_MODEL: qwen2.5vl:7b
+      TEXT_MODEL: gemma3:4b
+      VISION_MODEL: qwen2.5vl:7b
+
+      GENERATED_FILES_DIR: generated
+
+      JWT_SECRET: nitogen-demo-secret
+
+    volumes:
+      - generated_data:/app/generated
+      - uploads_data:/app/uploads
+
+    networks:
+      - nitogen
+
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: nitogen-frontend
+    restart: unless-stopped
+
+    depends_on:
+      - backend
+
+    ports:
+      - "3000:3000"
+
+    networks:
+      - nitogen
+
+
+volumes:
+  mongo_data:
+  generated_data:
+  uploads_data:
+
+
+networks:
+  nitogen:
+    driver: bridge
